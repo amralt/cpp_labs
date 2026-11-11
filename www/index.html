@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#6a56dc">
+  <meta name="description" content="Инженерный подвальчик - блог Инженерной Школы">
+  <title>Инженерный подвальчик</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: 'rgb(106, 86, 220)',
+            accent: '#6aa6ff',
+            hot:   'rgb(250, 133, 55)',
+            good:  'rgb(49, 210, 57)',
+            calm:  'rgb(65, 125, 177)',
+            ink:   'rgb(66, 66, 66)',
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-ink min-h-screen">
+
+  <header class="bg-white shadow-sm sticky top-0 z-10">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3 flex-wrap">
+      <a href="#/" class="text-xl font-bold text-brand flex items-center gap-2 shrink-0">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <image width="24" height="24" href="icon.svg"/>
+        </svg>
+        Инженерный подвальчик
+      </a>
+      <form id="search-form" class="flex-1 min-w-[140px] max-w-md">
+        <input type="search" id="search-input" placeholder="Поиск статей..."
+          class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm
+                 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
+      </form>
+      <nav class="flex items-center gap-2 shrink-0">
+        <a href="#/tags" class="text-sm text-slate-600 hover:text-brand px-2 py-1">Теги</a>
+        <a href="#/new" class="text-sm bg-brand text-white px-3 py-1.5 rounded-lg hover:opacity-90">
+          + Статья
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="app" class="max-w-4xl mx-auto px-4 py-6">
+    <div class="text-center text-slate-400 py-12">Загрузка…</div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
