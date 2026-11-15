@@ -7,6 +7,8 @@
 #include <iterator>
 #include <optional>
 
+#include <article.hpp>
+
 
 namespace lab2 {
 
@@ -17,8 +19,13 @@ std::string ArticleRepository::now_iso8601() {
 }
 
 std::vector<std::string> ArticleRepository::tokenize(const std::string& text) {
-    throw std::runtime_error("unimplemented");
-    return {};
+    std::istringstream stream(text);
+    std::vector<std::string> tokens;
+    std::string word;
+    while (stream >> word) {
+        tokens.push_back(word);
+    }
+    return {tokens};
 }
 
 std::vector<int> ArticleRepository::paginate(
@@ -52,18 +59,52 @@ int ArticleRepository::create_article(
     std::string content,
     std::set<std::string> tags
 ) {
-    throw std::runtime_error("unimplemented");
-    return {};
+    next_id++;
+
+    Article newArticle{
+        next_id,
+        title,
+        content,
+        tags,
+        0,
+        now_iso8601()
+    };
+
+    articles[next_id]=newArticle;
+
+    std::for_each(
+        tags.begin(), tags.end(),
+        [this](const std::string& tag) {
+            tag_index[tag].insert(next_id);
+        }
+    );
+
+    auto words = tokenize(content);
+    std::for_each(
+        words.begin(), words.end(),
+        [this](const std::string& word) {
+            word_index[word].insert(next_id);
+        }
+    );
+    
+    return {next_id};
 }
 
 std::optional<std::reference_wrapper<const Article>> ArticleRepository::get_article(int id) const {
-    throw std::runtime_error("unimplemented");
-    return {};
+    if (articles.find(id) != articles.end()) {
+        return std::optional<std::reference_wrapper<const Article>>(articles.at(id));
+    }
+
+    return std::nullopt;
 }
 
 bool ArticleRepository::like(int id) {
-    throw std::runtime_error("unimplemented");
-    return {};
+    if (articles.find(id) == articles.end()) {
+        return false;
+    }
+    articles.at(id).likes++;
+
+    return true;
 }
 
 std::vector<int> ArticleRepository::list_articles(
@@ -73,8 +114,41 @@ std::vector<int> ArticleRepository::list_articles(
     const std::string& sort,
     int& total
 ) const {
-    throw std::runtime_error("unimplemented");
-    return {};
+    std::vector<int> ids;
+    int count = 0;
+    std::for_each(
+         articles.cbegin(), articles.cend(),
+        [&ids, &count](const auto& entry) {
+            ids.push_back(entry.first);
+            count++;
+        }
+    );
+    total=count;
+
+    if (sort == "likes") {
+        std::sort(
+            ids.begin(), ids.end(),
+            [this](int a, int b) {
+                return articles.at(a).likes > articles.at(b).likes;
+            }
+        );
+    } else if (sort == "title") {
+        std::sort(
+            ids.begin(), ids.end(),
+            [this](int a, int b) {
+                return articles.at(a).title < articles.at(b).title;
+            }
+        );
+    } else if (sort == "new") {
+        std::sort(
+            ids.begin(), ids.end(),
+            [this](int a, int b) {
+                return articles.at(a).created_at > articles.at(b).created_at;
+            }
+        );
+    }
+    
+    return paginate(ids, page, per_page);
 }
 
 std::vector<SearchHit> ArticleRepository::search(
@@ -82,8 +156,49 @@ std::vector<SearchHit> ArticleRepository::search(
     int page, int per_page,
     int& total
 ) const {
-    throw std::runtime_error("unimplemented");
-    return {};
+    std::vector<std::string> unique_words = tokenize(query);
+
+    if (unique_words.empty())
+        return {};
+
+    std::vector<SearchHit> results;
+    std::map<int, int> id_to_score;
+    
+    std::for_each(articles.cbegin(), articles.cend(),
+        [&](std::pair<int, Article> pair) {
+            id_to_score[pair.first] = 0;
+        });
+
+    // очки релевантности прибавляются при совпадении хотя бы 1 слова. Если совпадет больше слов, то ничего не изменится.
+    std::for_each(articles.cbegin(), articles.cend(),
+        [&](const std::pair<int, Article>& pair) {
+            std::for_each(
+                unique_words.cbegin(),unique_words.cend(),
+                [&](const std::string w) {
+                    if (pair.second.content.find(w) != std::string::npos) {
+                        id_to_score[pair.first]++;
+                    }
+                });
+        });
+
+    std::for_each(id_to_score.cbegin(), id_to_score.cend(),
+        [&](std::pair<int, int> pair) {
+            if(pair.second!=0) {
+                results.push_back({pair.first, pair.second});
+            }
+        });
+
+    if (results.empty()) {
+        return {};
+    }
+
+
+    std::sort(results.begin(), results.end(),
+        [&](const SearchHit& sh1, const SearchHit& sh2) {
+            return sh1.score > sh2.score;
+        });
+
+    return results;
 }
 
 float compute_jaccard_index(const std::set<std::string>& a, const std::set<std::string>& b) {
@@ -120,23 +235,24 @@ std::vector<RelatedHit> ArticleRepository::related(int id, size_t limit) const {
             continue;
         }
         
-        hits.emplace_back(next_id, score);
+        hits.emplace_back(entry_id, score); // откуда next_id взять?
     }
 
-    const auto n = std::max(limit, hits.size());
-    std::partial_sort(
-        hits.begin(), hits.begin() + n, hits.end(),
+    const auto n = std::min(limit, hits.size()); // надо минимум, т.к. hits может быть меньше
+    std::sort(
+        hits.begin(),  hits.end(),
         [](const RelatedHit& a, const RelatedHit& b) {
-            return a.score < b.score;
+            return a.score > b.score;
         }
     );
-    hits.resize(n - 1);
+    hits.resize(n);
 
     return hits;
 }
 
 std::vector<TagCount> ArticleRepository::tag_cloud() const {
     throw std::runtime_error("unimplemented");
+    // TODO: надо отдельно хранить статистику? В какой переменной?
     return {};
 }
 
