@@ -117,10 +117,12 @@ std::vector<int> ArticleRepository::list_articles(
     std::vector<int> ids;
     int count = 0;
     std::for_each(
-         articles.cbegin(), articles.cend(),
+        articles.cbegin(), articles.cend(),
         [&ids, &count](const auto& entry) {
-            ids.push_back(entry.first);
-            count++;
+            if (tag.empty() || entry.second.tags.find(tag) != entry.second.tags.end()) {
+                ids.push_back(entry.first);
+                count++;
+            }
         }
     );
     total=count;
